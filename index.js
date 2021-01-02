@@ -72,6 +72,7 @@ async function main() {
     console.log(`Inserted docs with nested.`);
 
     const aggResWithNested = await client.search({
+        index: EVENTS_WITH_NESTED,
         body: {
             "size": 0,
             "aggs": {
@@ -94,18 +95,18 @@ async function main() {
     console.log(`Agg results with nested:`, JSON.stringify(bucketsWithNested, null, 2));
 
 
-    // WITHOUT NESTED:
-    const EVENTS_WITHOUT_NESTED = 'events_without_nested';
+    // WITH ARRAY:
+    const EVENTS_WITH_ARRAY = 'events_with_array';
 
     await client.indices.delete({
-        index: EVENTS_WITHOUT_NESTED,
+        index: EVENTS_WITH_ARRAY,
         ignore: 404,
     });
     await client.indices.create({
-        index: EVENTS_WITHOUT_NESTED,
+        index: EVENTS_WITH_ARRAY,
     });
     await client.indices.putMapping({
-        index: EVENTS_WITHOUT_NESTED,
+        index: EVENTS_WITH_ARRAY,
         body: {
             properties: {
                 productIds: {
@@ -116,23 +117,24 @@ async function main() {
     });
 
     client.index({
-        index: EVENTS_WITHOUT_NESTED,
+        index: EVENTS_WITH_ARRAY,
         body: {
-            "productIds": "abc"
+            "productIds": [ "abc" ]
         },
         refresh: true,
     });
     client.index({
-        index: EVENTS_WITHOUT_NESTED,
+        index: EVENTS_WITH_ARRAY,
         body: {
-            "productIds": "abc|def"
+            "productIds": [ "abc", "def" ]
         },
         refresh: true,
     });
     await waitMs(500);
-    console.log(`Inserted docs without nested.`);
+    console.log(`Inserted docs with array.`);
 
-    const aggResWithoutNested = await client.search({
+    const aggResWithArray = await client.search({
+        index: EVENTS_WITH_ARRAY,
         body: {
             "size": 0,
             "aggs": {
@@ -145,21 +147,8 @@ async function main() {
         }
     });
 
-    const rawBucketsWithoutNested = aggResWithoutNested.aggregations.popular_products.buckets;
-    console.log(`Raw agg results without nested:`, JSON.stringify(rawBucketsWithoutNested, null, 2));
-
-    const processedBuckets = {};
-    for (const bucket of rawBucketsWithoutNested) {
-        const keys = bucket.key.split('|');
-        for (const key of keys) {
-            if (!processedBuckets[key]) {
-                processedBuckets[key] = 1;
-            } else {
-                processedBuckets[key]++;
-            }
-        }
-    }
-    console.log(`Processed agg results without nested:`, JSON.stringify(processedBuckets, null, 2));
+    const bucketsWithArray = aggResWithArray.aggregations.popular_products.buckets;
+    console.log(`Agg results with array:`, JSON.stringify(bucketsWithArray, null, 2));
 }
 
 main().catch(console.error);
